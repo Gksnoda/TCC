@@ -20,7 +20,7 @@ torch.classes.path = []
 
 # Configuração da página
 st.set_page_config(
-    page_title="Tutor de Banco de Dados - UNIFEI",
+    page_title="Tutor de Sistemas Operacionais ECOS01A - UNIFEI",
     page_icon="🎓",
     layout="wide"
 )
@@ -140,10 +140,7 @@ def process_uploaded_file(uploaded_file) -> tuple[str, str, str]:
         image = Image.open(uploaded_file)
         file_content = encode_image_to_base64(image)
         return "image", file_content, file_info
-    elif file_type == 'application/pdf':
-        # PDF será processado diretamente pelo Claude
-        file_content = base64.b64encode(uploaded_file.read()).decode()
-        return "pdf", file_content, file_info
+
     elif file_type == 'text/plain':
         file_content = str(uploaded_file.read(), "utf-8")
         return "text", file_content, file_info
@@ -159,7 +156,7 @@ def create_claude_message(user_input: str, file_data: Optional[tuple] = None, se
     """Cria mensagem formatada para o Claude"""
     
     # System prompt especializado
-    system_prompt = """Você é um tutor online especializado em ajudar alunos da UNIFEI com a disciplina de Banco de Dados. Sua função é orientar o aprendizado de forma pedagógica e progressiva.
+    system_prompt = """Você é um tutor online especializado em ajudar alunos da UNIFEI com a disciplina de Sistemas Operacionais. Sua função é orientar o aprendizado de forma pedagógica e progressiva.
 
 ## Diretrizes de Comportamento:
 
@@ -183,7 +180,7 @@ def create_claude_message(user_input: str, file_data: Optional[tuple] = None, se
 - Pare sempre no penúltimo passo, deixando que o aluno complete a solução
 
 ### Recursos Disponíveis:
-- Você tem acesso a uma ferramenta de pesquisa no Qdrant com documentos da disciplina de Banco de Dados 2 da UNIFEI
+- Você tem acesso a uma ferramenta de pesquisa no Qdrant com documentos da disciplina de Sistemas Operacionais da UNIFEI
 - Use esses recursos para fundamentar suas explicações quando necessário
 - Referencie o material oficial sempre que relevante
 
@@ -227,19 +224,7 @@ Desenvolver o raciocínio crítico e a autonomia do aluno, garantindo que ele co
                 "type": "text",
                 "text": f"\n{file_info}"
             })
-        elif file_type == "pdf":
-            content.append({
-                "type": "document",
-                "source": {
-                    "type": "base64",
-                    "media_type": "application/pdf",
-                    "data": file_content
-                }
-            })
-            content.append({
-                "type": "text",
-                "text": f"\n{file_info}"
-            })
+
         elif file_type == "text":
             content.append({
                 "type": "text",
@@ -340,8 +325,8 @@ def call_claude_with_tools(anthropic_client, messages: List[Dict], search_functi
         return f"Erro ao chamar Claude: {e}"
 
 def main():
-    st.title("🎓 Tutor de Banco de Dados - UNIFEI")
-    st.markdown("**Assistente pedagógico especializado em Banco de Dados** • Suporte a textos, imagens, PDFs e busca no conhecimento")
+    st.title("🎓 Tutor de Sistemas Operacionais - UNIFEI")
+    st.markdown("**Assistente pedagógico especializado em Sistemas Operacionais** • Suporte a textos, imagens e busca no conhecimento")
     
     # Inicializa clientes
     try:
@@ -366,7 +351,7 @@ def main():
         
         st.markdown("---")
         st.markdown("### 📁 Suporte a Arquivos")
-        st.info("✅ **Imagens**: JPEG, PNG, GIF, WebP\n✅ **Documentos**: PDF")
+        st.info("✅ **Imagens**: JPEG, PNG, GIF, WebP\n")
         st.info("Use o botão de anexo no chat para enviar arquivos!")
         
         st.markdown("---")
@@ -382,7 +367,7 @@ def main():
     message = st.chat_input(
         "Digite sua mensagem...",
         accept_file=True,
-        file_type=["jpg", "jpeg", "png", "gif", "webp", "pdf"]
+        file_type=["jpg", "jpeg", "png", "gif", "webp", "txt"]
     )
     
     if message:

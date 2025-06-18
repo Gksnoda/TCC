@@ -5,8 +5,14 @@ build/
 dist/
 wheels/
 *.egg-info
+
+
 config.toml
 .cursor/
+uv.lock
+
+aulas/
+parsed/
 
 # Virtual environments
 .venv
