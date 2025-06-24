@@ -1,6 +1,5 @@
 import streamlit as st
 import anthropic
-import toml
 import base64
 from io import BytesIO
 from PIL import Image
@@ -27,12 +26,26 @@ st.set_page_config(
 
 @st.cache_resource
 def load_config():
-    """Carrega configurações do arquivo config.toml"""
+    """Carrega configurações dos secrets do Streamlit"""
     try:
-        config = toml.load("config.toml")
+        config = {
+            "api": {
+                "anthropic_api_key": st.secrets["anthropic_api_key"],
+                "ANTHROPIC_MODEL": st.secrets.get("ANTHROPIC_MODEL"),
+                "ANTHROPIC_MAX_TOKENS": int(st.secrets.get("ANTHROPIC_MAX_TOKENS"))
+            },
+            "qdrant": {
+                "url": st.secrets["qdrant_url"],
+                "api_key": st.secrets["qdrant_api_key"],
+                "collection_name": st.secrets.get("qdrant_collection_name")
+            },
+            "embeddings": {
+                "model_name": st.secrets.get("embeddings_model_name")
+            }
+        }
         return config
-    except FileNotFoundError:
-        st.error("Arquivo config.toml não encontrado. Verifique se o arquivo existe.")
+    except KeyError as e:
+        st.error(f"Variável de ambiente não encontrada: {e}. Configure os secrets no Streamlit Cloud.")
         st.stop()
 
 @st.cache_resource
