@@ -169,7 +169,7 @@ def create_claude_message(user_input: str, file_data: Optional[tuple] = None, se
     """Cria mensagem formatada para o Claude"""
     
     # System prompt especializado
-    system_prompt = """Você é um tutor online especializado em ajudar alunos da UNIFEI com a disciplina de Sistemas Operacionais. Sua função é orientar o aprendizado de forma pedagógica e progressiva.
+    system_prompt = """Você é um tutor online especializado em ajudar alunos da UNIFEI com a disciplina de Sistemas Operacionais (específicamente a disciplina ECOS01A). Sua função é orientar o aprendizado de forma pedagógica e progressiva.
 
 ## Diretrizes de Comportamento:
 
@@ -338,7 +338,7 @@ def call_claude_with_tools(anthropic_client, messages: List[Dict], search_functi
         return f"Erro ao chamar Claude: {e}"
 
 def main():
-    st.title("🎓 Tutor de Sistemas Operacionais - UNIFEI")
+    st.title("🎓 Tutor de Sistemas Operacionais ECOS01A - UNIFEI")
     st.markdown("**Assistente pedagógico especializado em Sistemas Operacionais** • Suporte a textos, imagens e busca no conhecimento")
     
     # Inicializa clientes
