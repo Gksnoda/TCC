@@ -132,8 +132,24 @@ def search_qdrant(query_text: str, qdrant_client, embedding_model, config, limit
         
         info("Busca no Qdrant concluída. Resultados encontrados: {}", len(results))
         if results:
-            info("Melhor resultado (score: {}): {}", results[0]["score"], 
-                 results[0]["payload"].get("text", "Sem texto")[:100] + "..." if len(results[0]["payload"].get("text", "")) > 100 else results[0]["payload"].get("text", "Sem texto"))
+            info("=== RESULTADOS DA BUSCA ===")
+            for i, result in enumerate(results, 1):
+                # Buscar texto no campo correto
+                result_text = result["payload"].get("text_content", "")
+                if not result_text:
+                    result_text = result["payload"].get("text", "Sem texto")
+                
+                # Mostrar apenas o comecinho do texto (primeiras 30 palavras para não ficar muito longo)
+                words = result_text.split()
+                if len(words) > 30:
+                    preview_text = " ".join(words[:30]) + "..."
+                else:
+                    preview_text = result_text
+                
+                info("Resultado {} (score: {:.6f}): {}", i, result["score"], preview_text)
+                info("Documento {}: {}", i, result["payload"].get("document_name", "Documento não identificado"))
+                if i < len(results):  # Adiciona separador se não for o último
+                    info("---")
         
         return results
     except Exception as e:
@@ -170,7 +186,7 @@ def process_uploaded_file(uploaded_file) -> tuple[str, str, str]:
         except:
             return "unsupported", "", f"Tipo de arquivo não suportado: {file_type}"
 
-def create_claude_message(user_input: str, file_data: Optional[tuple] = None, search_results: List[Dict] = None) -> tuple[str, List[Dict]]:
+def create_claude_message(user_input: str, file_data: Optional[tuple] = None) -> tuple[str, List[Dict]]:
     """Cria mensagem formatada para o Claude"""
     
     # System prompt especializado
@@ -179,10 +195,11 @@ def create_claude_message(user_input: str, file_data: Optional[tuple] = None, se
 ## Diretrizes de Comportamento:
 
 ### Comunicação:
-- Responda sempre em português brasileiro
-- Use linguagem clara, didática e acessível
-- Seja paciente e encorajador
-- Mantenha um tom amigável e profissional
+    - Responda sempre em português brasileiro
+    - Use linguagem clara, didática e acessível
+    - Seja paciente e encorajador
+    - Mantenha um tom amigável e profissional
+    - Sempre que for responder o aluno com a resposta da ferramenta, cite qual pagina voce tirou a resposta
 
 ### Metodologia de Ensino:
 - Quando um aluno pedir ajuda com exercícios, PRIMEIRO incentive-o a tentar resolver sozinho
@@ -206,24 +223,6 @@ def create_claude_message(user_input: str, file_data: Optional[tuple] = None, se
 Desenvolver o raciocínio crítico e a autonomia do aluno, garantindo que ele compreenda os conceitos e processos, não apenas obtenha respostas prontas."""
 
     content = []
-    
-    # Adiciona texto do usuário
-    if user_input:
-        content.append({
-            "type": "text",
-            "text": user_input
-        })
-    
-    # Adiciona resultados da busca se disponíveis
-    if search_results:
-        search_text = "\n\nResultados da busca no conhecimento:\n"
-        for i, result in enumerate(search_results, 1):
-            search_text += f"{i}. (Score: {result['score']:.3f}) {result['payload'].get('text', 'Sem texto')}\n"
-        
-        content.append({
-            "type": "text",
-            "text": search_text
-        })
     
     # Adiciona arquivo se fornecido
     if file_data:
@@ -254,12 +253,19 @@ Desenvolver o raciocínio crítico e a autonomia do aluno, garantindo que ele co
                 "text": f"\n❌ {file_info}"
             })
     
+    # Adiciona texto do usuário
+    if user_input:
+        content.append({
+            "type": "text",
+            "text": user_input
+        })
+    
     # Retorna o system prompt e as mensagens separadamente
     messages = [{"role": "user", "content": content}]
     
     return system_prompt, messages
 
-def call_claude_with_tools(anthropic_client, messages: List[Dict], search_function, config, system_prompt: str) -> tuple:
+def call_claude_with_tools(anthropic_client, messages: List[Dict], search_function, config, system_prompt: str):
     """Chama Claude com ferramentas disponíveis e streaming"""
     tools = [
         {
@@ -278,74 +284,68 @@ def call_claude_with_tools(anthropic_client, messages: List[Dict], search_functi
         }
     ]
     
-    total_input_tokens = 0
-    total_output_tokens = 0
+    # Classe para armazenar tokens capturados durante streaming
+    class TokenCounter:
+        def __init__(self):
+            self.input_tokens = 0
+            self.output_tokens = 0
     
-    try:
-        # Primeira chamada para verificar se Claude quer usar ferramentas
-        response = anthropic_client.messages.create(
-            model=config["api"]["ANTHROPIC_MODEL"],
-            max_tokens=config["api"]["ANTHROPIC_MAX_TOKENS"],
-            system=system_prompt,
-            tools=tools,
-            messages=messages
-        )
-        
-        # Atualiza contadores de tokens da primeira chamada
-        total_input_tokens += response.usage.input_tokens
-        total_output_tokens += response.usage.output_tokens
-        
-        # Processa resposta e possíveis chamadas de ferramentas
-        if response.stop_reason == "tool_use":
-            # Claude quer usar uma ferramenta
-            tool_calls = [block for block in response.content if block.type == "tool_use"]
-            
-            # Adiciona resposta do Claude às mensagens
-            messages.append({"role": "assistant", "content": response.content})
-            
-            # Processa cada chamada de ferramenta
-            tool_results = []
-            for tool_call in tool_calls:
-                if tool_call.name == "search_knowledge":
-                    query = tool_call.input["query"]
-                    info("Claude solicitou busca por: {}", query)
-                    search_results = search_function(query)
-                    
-                    tool_result = {
-                        "type": "tool_result",
-                        "tool_use_id": tool_call.id,
-                        "content": json.dumps(search_results, ensure_ascii=False)
-                    }
-                    tool_results.append(tool_result)
-            
-            # Adiciona resultados das ferramentas
-            messages.append({"role": "user", "content": tool_results})
-            
-            # Segunda chamada com streaming
-            def stream_generator():
-                final_input_tokens = 0
-                final_output_tokens = 0
-                with anthropic_client.messages.stream(
-                    model=config["api"]["ANTHROPIC_MODEL"],
-                    max_tokens=config["api"]["ANTHROPIC_MAX_TOKENS"],
-                    system=system_prompt,
-                    messages=messages
-                ) as stream:
-                    for text_chunk in stream.text_stream:
-                        yield text_chunk
-                    # Captura tokens da resposta final
-                    final_message = stream.get_final_message()
-                    if final_message and hasattr(final_message, 'usage'):
-                        final_input_tokens = final_message.usage.input_tokens
-                        final_output_tokens = final_message.usage.output_tokens
+    token_counter = TokenCounter()
+    
+    def main_stream_generator():
+        try:
+            # Primeira chamada COM STREAMING REAL
+            collected_text = ""
+            with anthropic_client.messages.stream(
+                model=config["api"]["ANTHROPIC_MODEL"],
+                max_tokens=config["api"]["ANTHROPIC_MAX_TOKENS"],
+                system=system_prompt,
+                tools=tools,
+                messages=messages,
+            ) as stream:
+                # STREAMING EM TEMPO REAL DA PRIMEIRA CHAMADA
+                for text in stream.text_stream:
+                    collected_text += text
+                    yield text  # Mostra em tempo real
                 
-                # Retorna tokens totais
-                return total_input_tokens + final_input_tokens, total_output_tokens + final_output_tokens
+                # Captura response após consumir stream
+                response = stream.get_final_message()
             
-            return stream_generator(), total_input_tokens, total_output_tokens
-        else:
-            # Resposta direta com streaming
-            def stream_generator():
+            # Sempre conta tokens da primeira chamada
+            token_counter.input_tokens += response.usage.input_tokens
+            token_counter.output_tokens += response.usage.output_tokens
+            info("Tokens primeira chamada - Input: {}, Output: {}", response.usage.input_tokens, response.usage.output_tokens)
+
+            # Verifica se precisa de ferramentas
+            if response.stop_reason == "tool_use":
+                info("Claude solicitou uso de ferramenta")
+                
+                # Claude quer usar uma ferramenta
+                tool_calls = [block for block in response.content if block.type == "tool_use"]
+                
+                # Processa ferramentas
+                messages.append({"role": "assistant", "content": response.content})
+                
+                tool_results = []
+                for tool_call in tool_calls:
+                    if tool_call.name == "search_knowledge":
+                        query = tool_call.input["query"]
+                        info("Claude solicitou busca por: {}", query)
+                        search_results = search_function(query)
+                        
+                        tool_result = {
+                            "type": "tool_result",
+                            "tool_use_id": tool_call.id,
+                            "content": json.dumps(search_results, ensure_ascii=False)
+                        }
+                        tool_results.append(tool_result)
+                
+                messages.append({"role": "user", "content": tool_results})
+                
+                # Mostra indicador de busca e segunda chamada COM STREAMING
+                yield "\n\n🔍 *Buscando informações na base de conhecimento...*\n\n"
+                
+                # Segunda chamada com streaming
                 with anthropic_client.messages.stream(
                     model=config["api"]["ANTHROPIC_MODEL"],
                     max_tokens=config["api"]["ANTHROPIC_MAX_TOKENS"],
@@ -354,12 +354,22 @@ def call_claude_with_tools(anthropic_client, messages: List[Dict], search_functi
                 ) as stream:
                     for text_chunk in stream.text_stream:
                         yield text_chunk
+                    
+                    # Captura tokens da segunda chamada também
+                    final_message = stream.get_final_message()
+                    token_counter.input_tokens += final_message.usage.input_tokens
+                    token_counter.output_tokens += final_message.usage.output_tokens
+                    info("Tokens segunda chamada - Input: {}, Output: {}", final_message.usage.input_tokens, final_message.usage.output_tokens)
             
-            return stream_generator(), total_input_tokens, total_output_tokens
-            
-    except Exception as e:
-        error("Erro ao chamar Claude: {}", str(e))
-        return f"Erro ao chamar Claude: {e}", 0, 0
+            # Log final dos tokens
+            info("=== RESUMO TOKENS DESTA INTERAÇÃO ===")
+            info("TOTAL - Input: {}, Output: {}", token_counter.input_tokens, token_counter.output_tokens)
+                
+        except Exception as e:
+            error("Erro ao chamar Claude: {}", str(e))
+            yield f"Erro ao chamar Claude: {e}"
+    
+    return main_stream_generator, token_counter
 
 def initialize_session_state():
     """Inicializa variáveis de estado da sessão"""
@@ -371,6 +381,8 @@ def initialize_session_state():
         st.session_state.total_output_tokens = 0
     if "total_cost" not in st.session_state:
         st.session_state.total_cost = 0.0
+    if "last_call_cost" not in st.session_state:
+        st.session_state.last_call_cost = 0.0
 
 def calculate_cost(input_tokens: int, output_tokens: int) -> float:
     """Calcula o custo baseado nos tokens de input e output"""
@@ -382,11 +394,16 @@ def update_token_usage(input_tokens: int, output_tokens: int):
     """Atualiza o uso de tokens e custos na sessão"""
     st.session_state.total_input_tokens += input_tokens
     st.session_state.total_output_tokens += output_tokens
-    session_cost = calculate_cost(input_tokens, output_tokens)
-    st.session_state.total_cost += session_cost
     
-    info("Tokens usados - Input: {}, Output: {}, Custo da chamada: ${:.6f}", 
-         input_tokens, output_tokens, session_cost)
+    # Calcula custo DESTA chamada específica
+    call_cost = calculate_cost(input_tokens, output_tokens)
+    st.session_state.last_call_cost = call_cost
+    
+    # Adiciona ao custo TOTAL da sessão
+    st.session_state.total_cost += call_cost
+    
+    info("Tokens usados - Input: {}, Output: {}, Custo desta chamada: ${:.6f}, Custo total sessão: ${:.6f}", 
+         input_tokens, output_tokens, call_cost, st.session_state.total_cost)
 
 def main():
     st.title("🎓 Tutor de Sistemas Operacionais ECOS01A - UNIFEI")
@@ -413,6 +430,7 @@ def main():
             st.session_state.total_input_tokens = 0
             st.session_state.total_output_tokens = 0
             st.session_state.total_cost = 0.0
+            st.session_state.last_call_cost = 0.0
             st.rerun()
         
         st.markdown("---")
@@ -421,25 +439,39 @@ def main():
         with st.expander("💰 Uso de Tokens e Custos", expanded=False):
             st.markdown("### 📊 Estatísticas da Sessão")
             
+            # Tokens
             col1, col2 = st.columns(2)
             with col1:
-                st.metric("Tokens Input", f"{st.session_state.total_input_tokens:,}")
-                st.metric("Tokens Output", f"{st.session_state.total_output_tokens:,}")
+                st.metric("📥 Input Tokens", f"{st.session_state.total_input_tokens:,}")
+                st.metric("📤 Output Tokens", f"{st.session_state.total_output_tokens:,}")
             
             with col2:
                 total_tokens = st.session_state.total_input_tokens + st.session_state.total_output_tokens
-                st.metric("Total Tokens", f"{total_tokens:,}")
-                st.metric("Custo Total", f"${st.session_state.total_cost:.6f}")
+                st.metric("🎯 Total Tokens", f"{total_tokens:,}")
+            
+            # Custos
+            st.markdown("---")
+            col3, col4 = st.columns(2)
+            with col3:
+                st.metric("💸 Última Chamada", f"${st.session_state.last_call_cost:.6f}")
+            
+            with col4:
+                st.metric("💰 Custo Total Sessão", f"${st.session_state.total_cost:.6f}")
             
             st.markdown("---")
             st.markdown("**💡 Preços por 1M de tokens:**")
             st.markdown(f"• Input: ${COST_INPUT_PER_MILLION:.2f}")
             st.markdown(f"• Output: ${COST_OUTPUT_PER_MILLION:.2f}")
             
+            st.markdown("---")
+            st.markdown("**💸 Última Chamada**: Custo apenas da mensagem atual")
+            st.markdown("**💰 Custo Total**: Soma de todas as chamadas da sessão")
+            
             if st.button("🔄 Resetar Contadores"):
                 st.session_state.total_input_tokens = 0
                 st.session_state.total_output_tokens = 0
                 st.session_state.total_cost = 0.0
+                st.session_state.last_call_cost = 0.0
                 st.rerun()
         
         st.markdown("---")
@@ -499,42 +531,59 @@ def main():
                 if file_data[0] == "error":
                     st.error(file_data[2])
         
-        # Busca no Qdrant (silenciosamente)
-        search_results = search_qdrant(user_input, qdrant_client, embedding_model, config)
-        
         # Cria função de busca para as ferramentas do Claude
         def search_function(query: str) -> List[Dict]:
-            return search_qdrant(query, qdrant_client, embedding_model, config)
+            return search_qdrant(query, qdrant_client, embedding_model, config, limit=3)
         
-        # Prepara mensagens para o Claude
-        system_prompt, claude_messages = create_claude_message(user_input, file_data, search_results)
+        # Prepara mensagens para o Claude - INCLUI TODO O HISTÓRICO
+        system_prompt, claude_messages = create_claude_message(user_input, file_data)
         
-        # Chama Claude
+        # Adiciona todo o histórico da conversa às mensagens do Claude
+        full_messages = []
+        for msg in st.session_state.messages[:-1]:  # Exclui a última (que acabamos de adicionar)
+            if msg["role"] == "user":
+                full_messages.append({"role": "user", "content": msg["content"]})
+            else:
+                full_messages.append({"role": "assistant", "content": msg["content"]})
+        
+        # Adiciona a mensagem atual do usuário
+        full_messages.extend(claude_messages)
+        
+        # Limpa tokens antes de processar nova mensagem
+        info("Limpando contadores de tokens para nova mensagem")
+        # Tokens são automaticamente limpos porque TokenCounter é criado novo a cada chamada
+        
+        # Chama Claude - spinner antes do streaming
+        placeholder = st.empty()
+        with placeholder:
+            st.info("🤔 Tutor está pensando...")
+        
         with st.chat_message("assistant"):
-            with st.spinner("Tutor está gerando resposta..."):
-                result = call_claude_with_tools(anthropic_client, claude_messages, search_function, config, system_prompt)
+            response = ""  # Inicializa response
+            placeholder.empty()  # Remove o spinner quando streaming começar
+            result = call_claude_with_tools(anthropic_client, full_messages, search_function, config, system_prompt)
             
-            if isinstance(result, tuple) and len(result) == 3:
-                stream_generator, input_tokens, output_tokens = result
+            if isinstance(result, tuple) and len(result) == 2:
+                stream_generator, token_counter = result
                 
                 if callable(stream_generator):
-                    # Usa streaming
+                    # Usa streaming em tempo real
                     response = st.write_stream(stream_generator)
+                    
+                    # Atualiza o uso de tokens e custos APÓS o streaming completar
+                    update_token_usage(token_counter.input_tokens, token_counter.output_tokens)
+                    
+                    # Adiciona resposta do assistente ao histórico ANTES do rerun
+                    st.session_state.messages.append({"role": "assistant", "content": response})
+                    
+                    # Força atualização da UI para mostrar novos tokens
+                    st.rerun()
                 else:
-                    # Resposta direta (caso de erro)
-                    response = stream_generator
-                    st.markdown(response)
-                
-                # Atualiza o uso de tokens e custos
-                update_token_usage(input_tokens, output_tokens)
+                    response = "Erro: stream_generator não é chamável"
+                    st.session_state.messages.append({"role": "assistant", "content": response})
             else:
-                # Erro
-                response = result if isinstance(result, str) else "Erro desconhecido"
-                st.markdown(response)
-                input_tokens = output_tokens = 0
-        
-        # Adiciona resposta do assistente ao histórico
-        st.session_state.messages.append({"role": "assistant", "content": response})
+                response = "Erro na chamada do Claude"
+                st.session_state.messages.append({"role": "assistant", "content": response})
 
 if __name__ == "__main__":
     main() 
