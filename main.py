@@ -466,13 +466,6 @@ def main():
             st.markdown("---")
             st.markdown("**💸 Última Chamada**: Custo apenas da mensagem atual")
             st.markdown("**💰 Custo Total**: Soma de todas as chamadas da sessão")
-            
-            if st.button("🔄 Resetar Contadores"):
-                st.session_state.total_input_tokens = 0
-                st.session_state.total_output_tokens = 0
-                st.session_state.total_cost = 0.0
-                st.session_state.last_call_cost = 0.0
-                st.rerun()
         
         st.markdown("---")
         st.markdown("### 📁 Suporte a Arquivos")
@@ -553,14 +546,16 @@ def main():
         info("Limpando contadores de tokens para nova mensagem")
         # Tokens são automaticamente limpos porque TokenCounter é criado novo a cada chamada
         
-        # Chama Claude - spinner antes do streaming
-        placeholder = st.empty()
-        with placeholder:
+        # Mostra "Tutor está pensando..." APÓS o usuário enviar a mensagem
+        thinking_placeholder = st.empty()
+        with thinking_placeholder:
             st.info("🤔 Tutor está pensando...")
         
+        # Chama Claude
         with st.chat_message("assistant"):
             response = ""  # Inicializa response
-            placeholder.empty()  # Remove o spinner quando streaming começar
+            # Remove o "pensando" quando começar a responder
+            thinking_placeholder.empty()
             result = call_claude_with_tools(anthropic_client, full_messages, search_function, config, system_prompt)
             
             if isinstance(result, tuple) and len(result) == 2:
