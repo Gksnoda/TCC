@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apresentação TCC - Gustavo Noda</title>
+    <style>
+        /* --- Configurações Globais e Nova Paleta de Cores --- */
+        :root {
+            --cor-fundo: #bbb9b2;
+            --cor-texto: #4F4A45; /* Cinza/marrom escuro para texto */
+            --cor-primaria: #647C90; /* Azul acinzentado */
+            --cor-secundaria: #B3A394; /* Bege/Taupe */
+            --cor-acento: #D48C70; /* NOVA COR: Terracota suave */
+            --cor-particulas: #647C90;
+            font-size: 18px; /* Aumentado de 16px para 18px */
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--cor-fundo);
+            color: var(--cor-texto);
+        }
+        
+        /* --- Novo Fundo de Partículas Animadas --- */
+        #particle-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* --- Estrutura do Slide --- */
+        .slide {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 4vw;
+            padding-bottom: 80px; /* Espaço para o rodapé */
+            box-sizing: border-box;
+            position: absolute;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            transition: opacity 0.6s ease-in-out, transform 0.6s ease-in-out;
+            visibility: hidden;
+            z-index: 1;
+        }
+        
+        .slide.capa {
+            padding-bottom: 4vw;
+        }
+
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* --- Numeração dos Slides --- */
+        .slide-number {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: var(--cor-primaria);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            z-index: 10;
+        }
+
+        .slide.capa .slide-number {
+            display: none; /* Esconder numeração na capa */
+        }
+        
+        /* --- Estilos de Conteúdo --- */
+        .slide-content {
+            max-width: 1400px; /* Aumentado de 1100px para 1400px */
+            width: 95%; /* Aumentado para ocupar mais espaço */
+            background: rgba(248, 246, 242, 0.9); /* Aumentei a opacidade de 0.85 para 0.9 */
+            backdrop-filter: blur(8px);
+            padding: 3em 4em; /* Aumentado de 2em 3em para 3em 4em */
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .slide-content.no-bg {
+            background: none;
+            backdrop-filter: none;
+            border: none;
+        }
+
+        h1 { font-size: 3.2rem; color: var(--cor-primaria); margin-bottom: 0.5em; } /* Aumentado de 2.8rem */
+        h2 { font-size: 2.4rem; color: var(--cor-primaria); font-weight: 600; } /* Aumentado de 2rem */
+        h3 { font-size: 1.8rem; color: var(--cor-secundaria); margin-bottom: 1em; text-transform: uppercase; letter-spacing: 1px;} /* Aumentado de 1.5rem */
+        p, li { font-size: 1.4rem; line-height: 1.6; text-align: left; } /* Aumentado de 1.25rem */
+        ul { display: inline-block; margin-top: 1.5em; list-style-position: inside; }
+        ol { display: inline-block; margin-top: 1.5em; list-style-position: inside; text-align: left; }
+        li { margin-bottom: 0.8em; }
+        strong { color: var(--cor-acento); } /* USANDO A NOVA COR DE ACENTO */
+
+        .autor-info {
+            position: absolute;
+            bottom: 5%;
+            width: 100%;
+            text-align: center;
+            font-size: 1.1rem; /* Aumentado de 1rem */
+            left: 0;
+        }
+
+        .logo-unifei {
+            max-width: 140px; /* Aumentado de 120px */
+            margin-bottom: 2em;
+        }
+
+        .media-container {
+            margin: 1.5em auto;
+            width: 100%;
+            max-width: 85%; /* Aumentado de 80% */
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            overflow: hidden;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .media-container img, .media-container video {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        .figure-caption { font-size: 1rem; font-style: italic; color: #666; text-align: center; margin-top: 1em; } /* Aumentado de 0.9rem */
+        
+        .illustration {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2em;
+            margin-top: 1em;
+            color: var(--cor-primaria);
+        }
+        .illustration .icon {
+            width: 60px; /* Aumentado de 50px */
+            height: 60px;
+        }
+        .illustration .prompt-box {
+            border: 2px solid var(--cor-secundaria);
+            border-radius: 10px;
+            padding: 1.2em; /* Aumentado de 1em */
+            max-width: 450px; /* Aumentado de 400px */
+            word-wrap: break-word;
+            font-size: 1rem; /* Aumentado de 0.8rem */
+            background: #fff;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        .two-column-layout {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2.5em;
+            margin-top: 1.5em;
+        }
+        .two-column-layout .column-text {
+            flex: 1.2;
+            text-align: left;
+        }
+        .two-column-layout .column-image {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Classe específica para imagens que precisam ser maiores */
+        .two-column-layout .column-image.large-image {
+            flex: 1.3; /* Aumenta a proporção da coluna da imagem */
+        }
+
+        .two-column-layout .column-image.large-image img {
+            width: 100%;
+            max-width: 900px; /* Aumenta o tamanho máximo */
+            min-width: 800px; /* Define um tamanho mínimo */
+        }
+        
+        .slide-footer {
+            position: absolute;
+            bottom: 25px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            z-index: 5;
+        }
+        .slide-footer img {
+            height: 35px;
+            width: auto;
+        }
+        .slide-footer p {
+            font-size: 1rem; /* Aumentado de 0.9rem */
+            color: var(--cor-texto);
+            margin: 0;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background-color: var(--cor-acento); /* USANDO A NOVA COR DE ACENTO */
+            color: #FFF !important;
+            padding: 18px 35px; /* Aumentado de 15px 30px */
+            border-radius: 10px;
+            text-decoration: none;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.2rem; /* Adicionado para aumentar o texto do botão */
+            margin-top: 1.5em;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .cta-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .nav-hint {
+            position: fixed; bottom: 20px; right: 20px; background-color: rgba(0,0,0,0.5);
+            color: white; padding: 8px 15px; border-radius: 20px; font-size: 1rem; /* Aumentado de 0.9rem */
+            opacity: 0.7; animation: fadeInOut 5s forwards; z-index: 100;
+        }
+        @keyframes fadeInOut { 0% { opacity: 0; } 10% { opacity: 0.7; } 90% { opacity: 0.7; } 100% { opacity: 0; } }
+
+        /* Estilos específicos para o slide de tokens */
+        .token-example {
+            background: rgba(100, 124, 144, 0.1);
+            padding: 1.5em;
+            border-radius: 10px;
+            margin: 1.5em 0;
+            border-left: 4px solid var(--cor-primaria);
+        }
+
+        .token-highlight {
+            background: var(--cor-acento);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="particle-canvas"></canvas>
+
+    <!-- Slide 1: Capa -->
+    <section class="slide capa active">
+        <div class="slide-content no-bg">
+            <img src="unifei_logo.png" alt="Logo da UNIFEI" class="logo-unifei">
+            <h2>Universidade Federal de Itajubá</h2>
+            <h1>DESENVOLVIMENTO DE CHATBOT PARA AUTOMAÇÃO DE TUTORIA PARA CURSOS ONLINE/VIRTUAIS UTILIZANDO LLMS</h1>
+            <div class="autor-info">
+                <p style="text-align:center; font-size: 1.3rem;"><strong>Autor:</strong> Gustavo Kiyoshi Sousa Noda</p>
+                <p style="text-align:center; font-size: 1.2rem;"><strong>Orientador:</strong> Otávio de Souza Martins Gomes</p> 
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 2: Roteiro da Apresentação -->
+    <section class="slide">
+        <div class="slide-number">2</div>
+        <div class="slide-content">
+            <h2>Roteiro da Apresentação</h2>
+            <ul style="text-align: left; display: table; margin: 2em auto; font-size: 1.5rem;">
+                <li style="margin-bottom: 1em;">Contexto e Motivação</li>
+                <li style="margin-bottom: 1em;">O Problema: Limitações dos LLMs Genéricos</li>
+                <li style="margin-bottom: 1em;">A Solução: Arquitetura RAG e Tool Use</li>
+                <li style="margin-bottom: 1em;">Tecnologias-Chave: Embeddings e Vector DBs</li>
+                <li style="margin-bottom: 1em;">Demonstração Prática</li>
+                <li style="margin-bottom: 1em;">Conclusão e Trabalhos Futuros</li>
+            </ul>
+        </div>
+        <div class="slide-footer">
+            <img src="unifei_logo.png" alt="Logo da UNIFEI">
+            <p>Universidade Federal de Itajubá - Ciência da Computação | Gustavo Noda</p>
+        </div>
+    </section>
+
+    <!-- Slide 3: Contextualização -->
+    <section class="slide">
+        <div class="slide-number">3</div>
+        <div class="slide-content">
+            <h2>Contexto: Um Assistente Pessoal de Estudos</h2>
+            <div class="two-column-layout">
+                <div class="column-image" style="flex:0.8;">
+                    <img src="https://placehold.co/300x300/647C90/F8F6F2?text=IA" alt="Imagem de uma IA auxiliando nos estudos" style="border-radius: 15px; flex-shrink: 0;">
+                </div>
+                <div class="column-text">
+                    <p>Este projeto introduz um <strong>tutor virtual</strong> projetado para ser um poderoso aliado no processo de aprendizagem.</p>
+                    <ul style="margin: 1em 0;">
+                        <li><strong>Para o Aluno:</strong> Acesso a respostas, revisões e explicações sobre o conteúdo da aula, 24/7.</li>
+                        <li><strong>Para o Professor:</strong> Automação de dúvidas recorrentes, liberando tempo para focar em questões complexas.</li>
+                    </ul>
+                    <p>O objetivo não é substituir o professor, mas sim <strong>potencializar o ensino</strong>.</p>
+                </div>
+            </div>
+        </div>
+        <div class="slide-footer">
+            <img src="unifei_logo.png" alt="Logo da UNIFEI">
+            <p>Universidade Federal de Itajubá - Ciência da Computação | Gustavo Noda</p>
+        </div>
+    </section>
+
+    <!-- Slide 4: A Motivação -->
+    <section class="slide">
+        <div class="slide-number">4</div>
+        <div class="slide-content">
+            <h2>O Problema: Por que não usar um chatbot genérico?</h2>
+            <ul>
+                <li>Modelos de Linguagem (LLMs) são treinados com dados <strong>públicos e generalistas</strong> da internet.</li>
+                <li>Eles possuem um conhecimento vasto, mas <strong>sem acesso a informações específicas</strong>, privadas ou de nicho.</li>
+                <li><strong>A consequência:</strong> Não sabem o que foi dito em uma aula específica ou o contexto de um curso.</li>
+            </ul>
+        </div>
+        <div class="slide-footer">
+            <img src="unifei_logo.png" alt="Logo da UNIFEI">
+            <p>Universidade Federal de Itajubá - Ciência da Computação | Gustavo Noda</p>
+        </div>
+    </section>
+
+    <!-- Slide 5: Teste Prático - O Modelo Genérico -->
+    <section class="slide">
+        <div class="slide-number">5</div>
+        <div class="slide-content">
+            <h3>"Como foi a aula do professor Otávio sobre Threads?"</h3>
+            <p>Ao ser questionado, um modelo genérico não pode fornecer uma resposta útil por falta de contexto.</p>
+            <div class="media-container">
+                <img src="gpt.png" alt="Screenshot da resposta do ChatGPT.">
+            </div>
+            <p class="figure-caption"><strong>Figura 1:</strong> Interação com um modelo de linguagem generalista.</p>
+        </div>
+        <div class="slide-footer">
+            <img src="unifei_logo.png" alt="Logo da UNIFEI">
+            <p>Universidade Federal de Itajubá - Ciência da Computação | Gustavo Noda</p>
+        </div>
+    </section>
+
+    <!-- Slide 6: A Proposta - O Tutor Especialista -->
+    <section class="slide">
+        <div class="slide-number">6</div>
+        <div class="slide-content">
+             <h3>A Solução: Nosso Tutor Especialista com RAG</h3>
+             <p>O chatbot desenvolvido conecta o LLM a uma base de dados específica, usando a técnica de <strong>Retrieval-Augmented Generation (RAG)</strong>.</p>
+            <div class="media-container">
+                <video src="meu_chat.mkv" autoplay muted loop playsinline alt="Vídeo demonstrando o chatbot do projeto respondendo corretamente."></video>
+            </div>
+            <p class="figure-caption"><strong>Figura 2:</strong> Demonstração do tutor, baseada no conteúdo do curso.</p>
+        </div>
+        <div class="slide-footer">
+            <img src="unifei_logo.png" alt="Logo da UNIFEI">
+            <p>Universidade Federal de Itajubá - Ciência da Computação | Gustavo Noda</p>
+        </div>
+    </section>
+
+    <!-- Slide 7: Abordagem Ingênua -->
+    <section class="slide">
+        <div class="slide-number">7</div>
+        <div class="slide-content">
+            <h2>Como dar contexto ao Agente?</h2>
+            <p>Uma primeira ideia seria fornecer todo o material didático diretamente na instrução inicial (prompt) do agente.</p>
+            <div class="illustration">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15.5 2.5H6.5C5.39543 2.5 4.5 3.39543 4.5 4.5V18.5C4.5 19.6046 5.39543 20.5 6.5 20.5H17.5C18.6046 20.5 19.5 19.6046 19.5 18.5V7.5L15.5 2.5Z" stroke="#4F4A45" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 6.5V20.5C3.5 21.6046 4.39543 22.5 5.5 22.5H16.5" stroke="#4F4A45" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M15.5 2.5V7.5H19.5" stroke="#4F4A45" stroke-width="1.5" stroke-linejoin="round"/></svg>
+                <svg class="icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 12H20M20 12L14 6M20 12L14 18" stroke="#647C90" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <div class="prompt-box"><strong>Sistema:</strong> Você é um tutor... Aqui está todo o material: [CONTEÚDO COMPLETO DOS PDFs]... Responda a pergunta.</div>
+            </div>
+            <p style="text-align: center; margin-top: 1.5em;">Teoricamente, isso daria ao modelo todo o contexto necessário para cada conversa.</p>
+        </div>
+        <div class="slide-footer">
+            <img src="unifei_logo.png" alt="Logo da UNIFEI">
+            <p>Universidade Federal de Itajubá - Ciência da Computação | Gustavo Noda</p>
+        </div>
+    </section>
+    
+    <!-- Slide 8: Os Problemas da Abordagem Ingênua -->
+    <section class="slide">
+        <div class="slide-number">8</div>
+        <div class="slide-content">
+            <h2>Dois Grandes Desafios</h2>
+            <p>Apesar de simples, a abordagem de inserir todo o conteúdo no prompt inicial enfrenta dois obstáculos críticos que a tornam inviável na prática:</p>
+            <div class="two-column-layout" style="gap: 5em;">
+                <div>
+                    <h3 style="color: var(--cor-primaria);">1. Custo de Tokens</h3>
+                    <p style="text-align: center;">Enviar milhares de tokens a cada nova conversa tem um custo financeiro proibitivo.</p>
+                </div>
+                <div>
+                    <h3 style="color: var(--cor-primaria);">2. Limite da Janela de Contexto</h3>
+                    <p style="text-align: center;">LLMs possuem um limite de quantos tokens conseguem processar de uma só vez.</p>
+                </div>
+            </div>
+        </div>
+        <div class="slide-footer">
+            <img src="unifei_logo.png" alt="Logo da UNIFEI">
+            <p>Universidade Federal de Itajubá - Ciência da Computação | Gustavo Noda</p>
+        </div>
+    </section>
+
+    <!-- Slide 9: NOVO - O que são Tokens? -->
+    <section class="slide">
+        <div class="slide-number">9</div>
+        <div class="slide-content">
+            <h2>Mas afinal, o que são "Tokens"?</h2>
+            <p>Tokens são as <strong>unidades básicas</strong> de processamento dos modelos de linguagem. Pense neles como as "palavras" que o modelo consegue entender.</p>
+            
+            <div class="token-example">
+                <p><strong>Exemplo prático:</strong></p>
+                <p>"Olá, como você está hoje?" = <span class="token-highlight">7 tokens</span></p>
+                <p style="margin-top: 1em; font-size: 1.1rem;">["Olá", ",", " como", " você", " está", " hoje", "?"]</p>
+            </div>
+
+            <ul style="margin-top: 1.5em;">
+                <li><strong>Custo:</strong> APIs de LLMs cobram por token processado (entrada + saída)</li>
+                <li><strong>Limite:</strong> Cada modelo tem um máximo de tokens que pode processar</li>
+                <li><strong>Impacto:</strong> Mais tokens = maior custo + possível perda de contexto</li>
+            </ul>
+        </div>
+        <div class="slide-footer">
+            <img src="unifei_logo.png" alt="Logo da UNIFEI">
+            <p>Universidade Federal de Itajubá - Ciência da Computação | Gustavo Noda</p>
+        </div>
+    </section>
+
+    <!-- Slide 10: O Problema da Janela de Contexto  -->
+    <section class="slide">
+        <div class="slide-number">10</div>
+        <div class="slide-content">
+            <h2>O Problema da Janela de Contexto</h2>
+            <div class="two-column-layout">
+                <div class="column-text" style="flex: 0.8;">
+                    <p>Além do custo, existe um limite técnico. A "janela de contexto" é a memória de curto prazo do modelo.</p>
+                    <p style="margin-top: 1em;">Se o histórico da conversa (incluindo o prompt gigante) ultrapassa esse limite, o modelo começa a "esquecer" as informações mais antigas para dar espaço às novas, perdendo o <strong>contexto essencial</strong> para responder corretamente.</p>
+                </div>
+                <div class="column-image large-image">
+                    <img src="context_window.png" alt="Diagrama ilustrando a janela de contexto de um LLM" style="width: 100%; max-width: 600px; border-radius: 10px; background: #fff; padding: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+                </div>
+            </div>
+        </div>
+        <div class="slide-footer">
+            <img src="unifei_logo.png" alt="Logo da UNIFEI">
+            <p>Universidade Federal de Itajubá - Ciência da Computação | Gustavo Noda</p>
+        </div>
+    </section>
+
+    <!-- Slide 11: A Solução: Tool Use & RAG -->
+    <section class="slide">
+        <div class="slide-number">11</div>
+        <div class="slide-content">
+            <h2>A Solução: RAG e "Tool Use"</h2>
+            <div class="two-column-layout">
+                <div class="column-text">
+                     <p>Para resolver ambos os problemas, damos ao agente uma <strong>ferramenta</strong>: a capacidade de fazer chamadas a uma API externa, que neste caso, se conecta ao nosso banco de dados especializado.</p>
+                     <p style="margin-top: 1em;">Dessa forma, o agente <strong>busca ativamente</strong> apenas a informação relevante para responder à pergunta específica do usuário. Isso é a essência do <strong>Retrieval-Augmented Generation (RAG)</strong>.</p>
+                </div>
+                <div class="column-image">
+                    <img src="tool_call.png" alt="Diagrama do fluxo de Tool Calling" style="width: 100%; max-width: 450px; border-radius: 10px; background: #fff; padding: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+                </div>
+            </div>
+        </div>
+        <div class="slide-footer">
+            <img src="unifei_logo.png" alt="Logo da UNIFEI">
+            <p>Universidade Federal de Itajubá - Ciência da Computação | Gustavo Noda</p>
+        </div>
+    </section>
+    
+    <!-- Slide 12: Fluxograma da Aplicação -->
+    <section class="slide">
+        <div class="slide-number">12</div>
+        <div class="slide-content">
+            <h2>Como Funciona o Tutor Virtual?</h2>
+            <p style="text-align: center; margin-bottom: 2em;">Fluxo completo do processamento das mensagens:</p>
+            
+            <div style="text-align: center; margin: 3em 0;">
+                <p style="font-size: 1.3rem; margin-bottom: 2em;">Clique no botão abaixo para visualizar o fluxograma detalhado:</p>
+                <a href="fluxograma.html" target="_blank" class="cta-button" style="font-size: 1.4rem; padding: 20px 40px;">
+                    📊 Ver Fluxograma Interativo
+                </a>
+            </div>
+            
+            <div style="margin-top: 3em;">
+                <h3 style="color: var(--cor-primaria);">Etapas Principais:</h3>
+                <ul style="text-align: left; margin-top: 1.5em;">
+                    <li><strong>Análise:</strong> O agente verifica se a pergunta é sobre o conteúdo das aulas</li>
+                    <li><strong>Busca RAG:</strong> Se sim, aciona a ferramenta de busca vetorial</li>
+                    <li><strong>Contexto:</strong> Recupera informações relevantes do banco de dados</li>
+                    <li><strong>Resposta:</strong> Gera uma resposta fundamentada no material encontrado</li>
+                </ul>
+            </div>
+        </div>
+        <div class="slide-footer">
+            <img src="unifei_logo.png" alt="Logo da UNIFEI">
+            <p>Universidade Federal de Itajubá - Ciência da Computação | Gustavo Noda</p>
+        </div>
+    </section>
+    
+    <!-- Slide 13: A Peça-Chave da Busca -->
+    <section class="slide">
+        <div class="slide-number">13</div>
+        <div class="slide-content">
+            <h2>Como o agente sabe o que buscar?</h2>
+            <p>Ok, o agente pode acessar o banco de dados. Mas como ele identifica qual, dentre centenas de trechos de aulas, é o relevante para a pergunta do aluno?</p>
+            <p style="text-align: center; margin-top: 1.5em;">A resposta está em traduzir o <strong>significado</strong> do texto para uma linguagem que o computador entenda: a matemática.</p>
+        </div>
+        <div class="slide-footer">
+            <img src="unifei_logo.png" alt="Logo da UNIFEI">
+            <p>Universidade Federal de Itajubá - Ciência da Computação | Gustavo Noda</p>
+        </div>
+    </section>
+
+    <!-- Slide 14: A Solução: Embeddings -->
+    <section class="slide">
+        <div class="slide-number">14</div>
+        <div class="slide-content">
+            <h2>A Solução: "Embeddings" (Vetores)</h2>
+            <div class="two-column-layout">
+                <div class="column-text">
+                    <p style="text-align: center;"><strong>Embedding transforma palavras em números de uma forma inteligente, onde palavras com significados parecidos geram números parecidos.</strong></p>
+                    <p style="text-align:center; margin-top: 1em;">É como dar um 'endereço matemático' para cada palavra baseado no seu significado.</p>
+                    <div class="illustration" style="gap: 1em; margin-top: 2em; flex-direction: column;">
+                        <div class="prompt-box" style="font-size: 1.1rem; text-align: center;">"threads em Java"</div>
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="transform: rotate(90deg);"><path d="M4 12H20M20 12L14 6M20 12L14 18" stroke="#647C90" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        <div class="prompt-box" style="font-size: 1.1rem; text-align: center; max-width: 280px;">[0.23, -0.45, 0.89, ...]</div>
+                    </div>
+                </div>
+                <div class="column-image">
+                    <img src="k_means.png" alt="Ilustração de K-Means Clustering" style="width: 100%; max-width: 450px; border-radius: 10px;">
+                </div>
+            </div>
+        </div>
+        <div class="slide-footer">
+            <img src="unifei_logo.png" alt="Logo da UNIFEI">
+            <p>Universidade Federal de Itajubá - Ciência da Computação | Gustavo Noda</p>
+        </div>
+    </section>
+
+    <!-- Slide 15: O Processo de Busca Vetorial -->
+    <section class="slide">
+        <div class="slide-number">15</div>
+        <div class="slide-content">
+            <h2>O Processo de Busca por Similaridade</h2>
+            <p>A "mágica" acontece em dois passos simples:</p>
+            <ol style="margin-top: 1.5em; list-style-position: inside;">
+                <li style="margin-bottom: 1.5em;"><strong>Embedding da Pergunta:</strong> Primeiro, transformamos a pergunta do usuário (Ex: "o que são threads?") em um vetor numérico.</li>
+                <li style="margin-bottom: 1.5em;"><strong>Busca no Banco de Dados:</strong> Em seguida, usamos esse vetor para fazer uma busca de similaridade no nosso banco de dados Qdrant, que já contém os vetores de todos os trechos das aulas.</li>
+            </ol>
+            <p style="text-align:center; font-weight: bold;">O banco de dados nos retorna os trechos de texto cujos vetores são matematicamente mais próximos ao vetor da pergunta.</p>
+        </div>
+        <div class="slide-footer">
+            <img src="unifei_logo.png" alt="Logo da UNIFEI">
+            <p>Universidade Federal de Itajubá - Ciência da Computação | Gustavo Noda</p>
+        </div>
+    </section>
+
+    <!-- Slide 16: O Banco de Dados Vetorial -->
+    <section class="slide">
+        <div class="slide-number">16</div>
+        <div class="slide-content">
+            <h2>Onde armazenar os vetores?</h2>
+            <div class="two-column-layout">
+                 <div class="column-text">
+                    <p>Bancos de dados tradicionais (SQL) não são eficientes para buscar por similaridade vetorial.</p>
+                    <p style="margin-top: 1em;">É necessário um <strong>Banco de Dados Vetorial</strong>, um tipo de banco NoSQL otimizado para armazenar vetores e realizar buscas de alta performance baseadas em proximidade matemática.</p>
+                     <p style="margin-top: 1em;">Neste projeto, a escolha foi o <strong>Qdrant</strong>, um Vector Database de alta performance e código aberto.</p>
+                </div>
+                <div class="column-image">
+                    <img src="qdrant_icon.svg" alt="Logo do Qdrant" style="width: 100%; max-width: 250px;">
+                </div>
+            </div>
+        </div>
+        <div class="slide-footer">
+            <img src="unifei_logo.png" alt="Logo da UNIFEI">
+            <p>Universidade Federal de Itajubá - Ciência da Computação | Gustavo Noda</p>
+        </div>
+    </section>
+
+    <!-- Slide 17: O Resultado da Busca -->
+    <section class="slide">
+        <div class="slide-number">17</div>
+        <div class="slide-content">
+            <h2>Resultado: Precisão e Contexto</h2>
+            <p>Com os trechos mais relevantes em mãos, o agente agora tem o contexto exato e necessário para formular uma resposta precisa e fundamentada no material do professor.</p>
+            <div class="token-example" style="margin-top: 2em; min-height: 100px;">
+                <p style="font-size: 1.2rem; text-align:center;">Contexto Encontrado: "Na aula 5, o professor Otávio explicou que threads são..."</p>
+            </div>
+            <p style="margin-top: 1.5em; text-align:center;">Essa abordagem resolve os problemas de custo e limite de contexto, pois enviamos ao modelo apenas uma pequena fração do material total a cada pergunta.</p>
+        </div>
+        <div class="slide-footer">
+            <img src="unifei_logo.png" alt="Logo da UNIFEI">
+            <p>Universidade Federal de Itajubá - Ciência da Computação | Gustavo Noda</p>
+        </div>
+    </section>
+
+    <!-- Slide 18: NOVO - Apresentação do Streamlit -->
+    <section class="slide">
+        <div class="slide-number">18</div>
+        <div class="slide-content">
+            <h2>Interface do Usuário: Streamlit</h2>
+            <div class="two-column-layout">
+                <div class="column-text">
+                    <p>Para criar uma interface amigável e acessível para o tutor virtual, utilizamos o <strong>Streamlit</strong>.</p>
+                    <ul style="margin-top: 1.5em;">
+                        <li><strong>Framework Python:</strong> Permite criar aplicações web rapidamente</li>
+                        <li><strong>Interface Intuitiva:</strong> Chat em tempo real, fácil de usar</li>
+                        <li><strong>Deploy Simples:</strong> Hospedagem gratuita na nuvem</li>
+                        <li><strong>Prototipagem Rápida:</strong> Ideal para demonstrações acadêmicas</li>
+                    </ul>
+                </div>
+                <div class="column-image">
+                    <img src="stlit.png" alt="Logo do Streamlit" style="width: 100%; max-width: 300px;">
+                </div>
+            </div>
+        </div>
+        <div class="slide-footer">
+            <img src="unifei_logo.png" alt="Logo da UNIFEI">
+            <p>Universidade Federal de Itajubá - Ciência da Computação | Gustavo Noda</p>
+        </div>
+    </section>
+
+    <!-- Slide 19: NOVO - Demonstração Prática -->
+    <section class="slide">
+        <div class="slide-number">19</div>
+        <div class="slide-content">
+            <h2>Vamos testar o Tutor Virtual?</h2>
+            <p style="text-align: center; margin-top: 2em; font-size: 1.3rem;">Para explorar o tutor em ação, acesse o link abaixo.</p>
+            <a href="https://nodatccunifei.streamlit.app" target="_blank" class="cta-button">
+                🚀 Testar o Tutor Virtual
+            </a>
+            <p class="figure-caption" style="margin-top: 2em; font-size: 1.1rem;">https://nodatccunifei.streamlit.app</p>
+            <p style="margin-top: 1.5em; font-style: italic;">Experimente fazer perguntas sobre o conteúdo das aulas de Sistemas Operacionais!</p>
+        </div>
+        <div class="slide-footer">
+            <img src="unifei_logo.png" alt="Logo da UNIFEI">
+            <p>Universidade Federal de Itajubá - Ciência da Computação | Gustavo Noda</p>
+        </div>
+    </section>
+
+    <!-- Slide 20: NOVO - Agradecimentos -->
+    <section class="slide">
+        <div class="slide-number">20</div>
+        <div class="slide-content">
+            <h2>Dúvidas?</h2>
+            <h1 style="margin-top: 1em;">Obrigado!</h1>
+            
+            <div style="margin-top: 4em; text-align: center;">
+                <img src="unifei_logo.png" alt="Logo da UNIFEI" class="logo-unifei" style="max-width: 180px;">
+                <p style="font-size: 1.5rem; margin-top: 2em;"><strong>Gustavo Kiyoshi Sousa Noda</strong></p>
+            </div>
+        </div>
+        <div class="slide-footer">
+            <img src="unifei_logo.png" alt="Logo da UNIFEI">
+            <p>Universidade Federal de Itajubá - Ciência da Computação | Gustavo Noda</p>
+        </div>
+    </section>
+    
+    <div class="nav-hint">Use as setas ◄ e ► para navegar</div>
+
+    <script>
+        // --- Lógica de Navegação dos Slides ---
+        const slides = document.querySelectorAll('.slide');
+        let currentSlide = 0;
+        const totalSlides = slides.length;
+
+        function updateSlideNumbers() {
+            slides.forEach((slide, index) => {
+                const slideNumber = slide.querySelector('.slide-number');
+                if (slideNumber && index > 0) { // Não mostra número na capa (índice 0)
+                    slideNumber.textContent = index + 1;
+                }
+            });
+        }
+
+        function showSlide(index) {
+            if (index >= slides.length) {
+                index = slides.length - 1;
+            }
+            if (index < 0) {
+                index = 0;
+            }
+            
+            slides[currentSlide].classList.remove('active');
+            slides[index].classList.add('active');
+            currentSlide = index;
+        }
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'ArrowRight') {
+                showSlide(currentSlide + 1);
+            } else if (event.key === 'ArrowLeft') {
+                showSlide(currentSlide - 1);
+            }
+        });
+
+        // --- Lógica do Fundo de Partículas ---
+        window.onload = function() {
+            const canvas = document.getElementById('particle-canvas');
+            const ctx = canvas.getContext('2d');
+            let particles = [];
+            const particleCount = 70;
+            const maxDistance = 120;
+            
+            function resizeCanvas() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            
+            function initParticles() {
+                particles = [];
+                for(let i = 0; i < particleCount; i++) {
+                    particles.push({
+                        x: Math.random() * canvas.width,
+                        y: Math.random() * canvas.height,
+                        vx: (Math.random() - 0.5) * 0.5,
+                        vy: (Math.random() - 0.5) * 0.5,
+                        radius: Math.random() * 1.5 + 1
+                    });
+                }
+            }
+            
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                particles.forEach(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+
+                    if(p.x < 0 || p.x > canvas.width) p.vx *= -1;
+                    if(p.y < 0 || p.y > canvas.height) p.vy *= -1;
+
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--cor-particulas').trim() + '80';
+                    ctx.fill();
+                });
+
+                for(let i = 0; i < particles.length; i++) {
+                    for(let j = i; j < particles.length; j++) {
+                        const dist = Math.sqrt(Math.pow(particles[i].x - particles[j].x, 2) + Math.pow(particles[i].y - particles[j].y, 2));
+
+                        if(dist < maxDistance) {
+                            ctx.beginPath();
+                            ctx.moveTo(particles[i].x, particles[i].y);
+                            ctx.lineTo(particles[j].x, particles[j].y);
+                            ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--cor-acento').trim() + '2A'; // USANDO NOVA COR
+                            ctx.lineWidth = 1;
+                            ctx.stroke();
+                        }
+                    }
+                }
+
+                requestAnimationFrame(animate);
+            }
+
+            window.addEventListener('resize', () => {
+                resizeCanvas();
+                initParticles();
+            });
+
+            resizeCanvas();
+            initParticles();
+            updateSlideNumbers();
+            animate();
+            showSlide(currentSlide);
+        }
+    </script>
+</body>
+</html>

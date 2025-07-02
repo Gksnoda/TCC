@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fluxograma - Tutor Virtual</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #bbb9b2;
+            color: #4F4A45;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            background: rgba(248, 246, 242, 0.9);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #647C90;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+        }
+        
+        .mermaid {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 600px;
+        }
+        
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #647C90;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 20px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .close-btn:hover {
+            background: #4F4A45;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <button class="close-btn" onclick="window.close()" title="Fechar">&times;</button>
+        <h1>Fluxograma do Tutor Virtual</h1>
+        
+        <div class="mermaid">
+            graph TD
+                A["👤 Usuário manda mensagem"] --> B["🤖 Agente analisa a mensagem"]
+                B --> C{"📚 É pergunta sobre aula<br/>do Prof. Otávio?"}
+                C -->|Sim| D["🔧 Usa Tool Call (RAG)"]
+                C -->|Não| H["💬 Resposta genérica"]
+                D --> E["🔍 Busca informações<br/>relacionadas no BD vetorial"]
+                E --> F["📝 Adiciona resultado<br/>no histórico de mensagens"]
+                F --> G["✨ Agente gera resposta<br/>baseada no contexto encontrado"]
+                G --> I["📤 Envia resposta para usuário"]
+                H --> I
+                
+                style A fill:#D48C70,stroke:#4F4A45,stroke-width:2px,color:#fff
+                style I fill:#647C90,stroke:#4F4A45,stroke-width:2px,color:#fff
+                style D fill:#B3A394,stroke:#4F4A45,stroke-width:2px
+                style E fill:#B3A394,stroke:#4F4A45,stroke-width:2px
+                style C fill:#FFE4B5,stroke:#4F4A45,stroke-width:2px
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'base',
+            themeVariables: {
+                primaryColor: '#647C90',
+                primaryTextColor: '#4F4A45',
+                primaryBorderColor: '#4F4A45',
+                lineColor: '#647C90',
+                secondaryColor: '#B3A394',
+                tertiaryColor: '#D48C70',
+                background: '#F8F6F2',
+                mainBkg: '#F8F6F2',
+                nodeBkg: '#F8F6F2',
+                clusterBkg: '#F8F6F2'
+            }
+        });
+    </script>
+</body>
+</html> 

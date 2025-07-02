@@ -24,6 +24,10 @@ st.set_page_config(
     layout="wide"
 )
 
+# Constantes para cálculo de custos
+COST_INPUT_PER_MILLION = 3.0  # $3 por 1 milhão de tokens de input
+COST_OUTPUT_PER_MILLION = 15.0  # $15 por 1 milhão de tokens de output
+
 @st.cache_resource
 def load_config():
     """Carrega configurações dos secrets do Streamlit"""
@@ -63,6 +67,7 @@ def initialize_clients():
     if "url" in qdrant_config and qdrant_config["url"]:
         # Usa URL e API key se disponível
         qdrant_client = QdrantClient(
+            check_compatibility=False,
             url=qdrant_config["url"],
             api_key=qdrant_config.get("api_key")
         )
@@ -254,7 +259,7 @@ Desenvolver o raciocínio crítico e a autonomia do aluno, garantindo que ele co
     
     return system_prompt, messages
 
-def call_claude_with_tools(anthropic_client, messages: List[Dict], search_function, config, system_prompt: str) -> str:
+def call_claude_with_tools(anthropic_client, messages: List[Dict], search_function, config, system_prompt: str) -> tuple:
     """Chama Claude com ferramentas disponíveis e streaming"""
     tools = [
         {
@@ -273,6 +278,9 @@ def call_claude_with_tools(anthropic_client, messages: List[Dict], search_functi
         }
     ]
     
+    total_input_tokens = 0
+    total_output_tokens = 0
+    
     try:
         # Primeira chamada para verificar se Claude quer usar ferramentas
         response = anthropic_client.messages.create(
@@ -282,6 +290,10 @@ def call_claude_with_tools(anthropic_client, messages: List[Dict], search_functi
             tools=tools,
             messages=messages
         )
+        
+        # Atualiza contadores de tokens da primeira chamada
+        total_input_tokens += response.usage.input_tokens
+        total_output_tokens += response.usage.output_tokens
         
         # Processa resposta e possíveis chamadas de ferramentas
         if response.stop_reason == "tool_use":
@@ -309,33 +321,64 @@ def call_claude_with_tools(anthropic_client, messages: List[Dict], search_functi
             # Adiciona resultados das ferramentas
             messages.append({"role": "user", "content": tool_results})
             
-            # Retorna um objeto que pode ser usado com st.write_stream
-            def stream_generator():
-                with anthropic_client.messages.stream(
-                    model=config["api"]["ANTHROPIC_MODEL"],
-                    max_tokens=config["api"]["ANTHROPIC_MAX_TOKENS"],
-                    system=system_prompt,
-                    messages=messages
-                ) as stream:
-                    for text_chunk in stream.text_stream:
-                        yield text_chunk
-            return stream_generator()
+            # Segunda chamada com os resultados das ferramentas
+            final_response = anthropic_client.messages.create(
+                model=config["api"]["ANTHROPIC_MODEL"],
+                max_tokens=config["api"]["ANTHROPIC_MAX_TOKENS"],
+                system=system_prompt,
+                messages=messages
+            )
+            
+            # Atualiza contadores de tokens da segunda chamada
+            total_input_tokens += final_response.usage.input_tokens
+            total_output_tokens += final_response.usage.output_tokens
+            
+            # Extrai o texto da resposta final
+            response_text = ""
+            for block in final_response.content:
+                if block.type == "text":
+                    response_text += block.text
+            
+            return response_text, total_input_tokens, total_output_tokens
         else:
-            # Resposta direta, criar stream
-            def stream_generator():
-                with anthropic_client.messages.stream(
-                    model=config["api"]["ANTHROPIC_MODEL"],
-                    max_tokens=config["api"]["ANTHROPIC_MAX_TOKENS"],
-                    system=system_prompt,
-                    messages=messages
-                ) as stream:
-                    for text_chunk in stream.text_stream:
-                        yield text_chunk
-            return stream_generator()
+            # Resposta direta
+            response_text = ""
+            for block in response.content:
+                if block.type == "text":
+                    response_text += block.text
+            
+            return response_text, total_input_tokens, total_output_tokens
             
     except Exception as e:
         error("Erro ao chamar Claude: {}", str(e))
-        return f"Erro ao chamar Claude: {e}"
+        return f"Erro ao chamar Claude: {e}", 0, 0
+
+def initialize_session_state():
+    """Inicializa variáveis de estado da sessão"""
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+    if "total_input_tokens" not in st.session_state:
+        st.session_state.total_input_tokens = 0
+    if "total_output_tokens" not in st.session_state:
+        st.session_state.total_output_tokens = 0
+    if "total_cost" not in st.session_state:
+        st.session_state.total_cost = 0.0
+
+def calculate_cost(input_tokens: int, output_tokens: int) -> float:
+    """Calcula o custo baseado nos tokens de input e output"""
+    input_cost = (input_tokens / 1_000_000) * COST_INPUT_PER_MILLION
+    output_cost = (output_tokens / 1_000_000) * COST_OUTPUT_PER_MILLION
+    return input_cost + output_cost
+
+def update_token_usage(input_tokens: int, output_tokens: int):
+    """Atualiza o uso de tokens e custos na sessão"""
+    st.session_state.total_input_tokens += input_tokens
+    st.session_state.total_output_tokens += output_tokens
+    session_cost = calculate_cost(input_tokens, output_tokens)
+    st.session_state.total_cost += session_cost
+    
+    info("Tokens usados - Input: {}, Output: {}, Custo da chamada: ${:.6f}", 
+         input_tokens, output_tokens, session_cost)
 
 def main():
     st.title("🎓 Tutor de Sistemas Operacionais ECOS01A - UNIFEI")
@@ -350,8 +393,7 @@ def main():
         st.stop()
     
     # Inicializa histórico de chat
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
+    initialize_session_state()
     
     # Sidebar para configurações
     with st.sidebar:
@@ -360,7 +402,37 @@ def main():
         # Botão para limpar chat
         if st.button("🗑️ Limpar Chat"):
             st.session_state.messages = []
+            st.session_state.total_input_tokens = 0
+            st.session_state.total_output_tokens = 0
+            st.session_state.total_cost = 0.0
             st.rerun()
+        
+        st.markdown("---")
+        
+        # Menu de tokens e custos
+        with st.expander("💰 Uso de Tokens e Custos", expanded=False):
+            st.markdown("### 📊 Estatísticas da Sessão")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("Tokens Input", f"{st.session_state.total_input_tokens:,}")
+                st.metric("Tokens Output", f"{st.session_state.total_output_tokens:,}")
+            
+            with col2:
+                total_tokens = st.session_state.total_input_tokens + st.session_state.total_output_tokens
+                st.metric("Total Tokens", f"{total_tokens:,}")
+                st.metric("Custo Total", f"${st.session_state.total_cost:.6f}")
+            
+            st.markdown("---")
+            st.markdown("**💡 Preços por 1M de tokens:**")
+            st.markdown(f"• Input: ${COST_INPUT_PER_MILLION:.2f}")
+            st.markdown(f"• Output: ${COST_OUTPUT_PER_MILLION:.2f}")
+            
+            if st.button("🔄 Resetar Contadores"):
+                st.session_state.total_input_tokens = 0
+                st.session_state.total_output_tokens = 0
+                st.session_state.total_cost = 0.0
+                st.rerun()
         
         st.markdown("---")
         st.markdown("### 📁 Suporte a Arquivos")
@@ -434,62 +506,25 @@ def main():
         # Prepara mensagens para o Claude
         system_prompt, claude_messages = create_claude_message(user_input, file_data, search_results)
         
-        # Chama Claude com streaming
+        # Chama Claude
         with st.chat_message("assistant"):
             with st.spinner("Claude está pensando..."):
-                stream_or_error = call_claude_with_tools(anthropic_client, claude_messages, search_function, config, system_prompt)
+                result = call_claude_with_tools(anthropic_client, claude_messages, search_function, config, system_prompt)
             
-            if isinstance(stream_or_error, str):
-                # Erro
-                response = stream_or_error
+            if isinstance(result, tuple) and len(result) == 3:
+                response, input_tokens, output_tokens = result
                 st.markdown(response)
+                
+                # Atualiza o uso de tokens e custos
+                update_token_usage(input_tokens, output_tokens)
             else:
-                # Usando o método nativo st.write_stream com tratamento de erro
-                try:
-                    # Log para debug
-                    info("Iniciando streaming com st.write_stream")
-                    
-                    # Utilizamos o write_stream do Streamlit, que já tem tratamento interno
-                    response = st.write_stream(stream_or_error)
-                    
-                    # Log após o streaming
-                    info("Streaming concluído com sucesso")
-                    
-                    # Se a resposta estiver vazia, exibimos mensagem
-                    if not response:
-                        fallback_response = "Resposta recebida, mas sem conteúdo textual."
-                        st.markdown(fallback_response)
-                        response = fallback_response
-                        
-                except Exception as e:
-                    error(f"Erro ao processar stream: {e}")
-                    error_msg = f"Erro ao processar a resposta: {e}"
-                    st.error(error_msg)
-                    response = error_msg
+                # Erro
+                response = result if isinstance(result, str) else "Erro desconhecido"
+                st.markdown(response)
+                input_tokens = output_tokens = 0
         
         # Adiciona resposta do assistente ao histórico
         st.session_state.messages.append({"role": "assistant", "content": response})
-        
-        # Salva embedding da mensagem do usuário no Qdrant (opcional)
-        if user_embedding:
-            try:
-                point_id = str(uuid.uuid4())
-                qdrant_client.upsert(
-                    collection_name=config["qdrant"]["collection_name"],
-                    points=[
-                        PointStruct(
-                            id=point_id,
-                            vector=user_embedding,
-                            payload={
-                                "text": user_input,
-                                "timestamp": str(st.session_state.get("timestamp", "unknown")),
-                                "type": "user_message"
-                            }
-                        )
-                    ]
-                )
-            except Exception as e:
-                st.error(f"Erro ao salvar no Qdrant: {e}")
 
 if __name__ == "__main__":
     main() 

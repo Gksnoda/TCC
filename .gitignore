@@ -10,9 +10,7 @@ wheels/
 config.toml
 .cursor/
 uv.lock
-
-aulas/
-parsed/
+.streamlit/
 
 # Virtual environments
 .venv
