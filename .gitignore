@@ -12,6 +12,9 @@ config.toml
 uv.lock
 .streamlit/
 
+teste.py
+tool.py
+
 # Virtual environments
 .venv
 .venv/
