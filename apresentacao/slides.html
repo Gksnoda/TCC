@@ -483,28 +483,26 @@
         </div>
     </section>
     
-    <!-- Slide 12: Fluxograma da Aplicação -->
+    <!-- Slide 12: NOVO - O que é RAG? -->
     <section class="slide">
         <div class="slide-number">12</div>
         <div class="slide-content">
-            <h2>Como Funciona o Tutor Virtual?</h2>
-            <p style="text-align: center; margin-bottom: 2em;">Fluxo completo do processamento das mensagens:</p>
-            
-            <div style="text-align: center; margin: 3em 0;">
-                <p style="font-size: 1.3rem; margin-bottom: 2em;">Clique no botão abaixo para visualizar o fluxograma detalhado:</p>
-                <a href="fluxograma.html" target="_blank" class="cta-button" style="font-size: 1.4rem; padding: 20px 40px;">
-                    📊 Ver Fluxograma Interativo
-                </a>
-            </div>
-            
-            <div style="margin-top: 3em;">
-                <h3 style="color: var(--cor-primaria);">Etapas Principais:</h3>
-                <ul style="text-align: left; margin-top: 1.5em;">
-                    <li><strong>Análise:</strong> O agente verifica se a pergunta é sobre o conteúdo das aulas</li>
-                    <li><strong>Busca RAG:</strong> Se sim, aciona a ferramenta de busca vetorial</li>
-                    <li><strong>Contexto:</strong> Recupera informações relevantes do banco de dados</li>
-                    <li><strong>Resposta:</strong> Gera uma resposta fundamentada no material encontrado</li>
-                </ul>
+            <h2>O que é RAG (Retrieval-Augmented Generation)?</h2>
+            <div class="two-column-layout">
+                <div class="column-text">
+                    <p><strong>RAG</strong> é uma técnica que combina a capacidade de geração de texto dos LLMs com a busca de informações específicas em bases de dados externas.</p>
+                    
+                    <ul style="margin-top: 1.5em;">
+                        <li><strong>Retrieval (Recuperação):</strong> Busca informações relevantes na base de dados</li>
+                        <li><strong>Augmented (Aumentado):</strong> Enriquece o contexto do modelo com essas informações</li>
+                        <li><strong>Generation (Geração):</strong> Produz respostas fundamentadas nos dados encontrados</li>
+                    </ul>
+                    
+                    <p style="margin-top: 1.5em;">Essa abordagem permite que o modelo acesse conhecimento específico e atualizado, superando as limitações de seu treinamento original.</p>
+                </div>
+                <div class="column-image">
+                    <img src="RAG.png" alt="Diagrama explicativo do processo RAG" style="width: 100%; max-width: 500px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                </div>
             </div>
         </div>
         <div class="slide-footer">
@@ -610,9 +608,39 @@
         </div>
     </section>
 
-    <!-- Slide 18: NOVO - Apresentação do Streamlit -->
+    <!-- Slide 18: Fluxograma da Aplicação -->
     <section class="slide">
         <div class="slide-number">18</div>
+        <div class="slide-content">
+            <h2>Como Funciona o Tutor Virtual?</h2>
+            <p style="text-align: center; margin-bottom: 2em;">Fluxo completo do processamento das mensagens:</p>
+            
+            <div style="text-align: center; margin: 3em 0;">
+                <p style="font-size: 1.3rem; margin-bottom: 2em;">Clique no botão abaixo para visualizar o fluxograma detalhado:</p>
+                <a href="fluxograma.html" target="_blank" class="cta-button" style="font-size: 1.4rem; padding: 20px 40px;">
+                    📊 Ver Fluxograma Interativo
+                </a>
+            </div>
+            
+            <div style="margin-top: 3em;">
+                <h3 style="color: var(--cor-primaria);">Etapas Principais:</h3>
+                <ul style="text-align: left; margin-top: 1.5em;">
+                    <li><strong>Análise:</strong> O agente verifica se a pergunta é sobre o conteúdo das aulas</li>
+                    <li><strong>Busca RAG:</strong> Se sim, aciona a ferramenta de busca vetorial</li>
+                    <li><strong>Contexto:</strong> Recupera informações relevantes do banco de dados</li>
+                    <li><strong>Resposta:</strong> Gera uma resposta fundamentada no material encontrado</li>
+                </ul>
+            </div>
+        </div>
+        <div class="slide-footer">
+            <img src="unifei_logo.png" alt="Logo da UNIFEI">
+            <p>Universidade Federal de Itajubá - Ciência da Computação | Gustavo Noda</p>
+        </div>
+    </section>
+
+    <!-- Slide 19: NOVO - Apresentação do Streamlit -->
+    <section class="slide">
+        <div class="slide-number">19</div>
         <div class="slide-content">
             <h2>Interface do Usuário: Streamlit</h2>
             <div class="two-column-layout">
@@ -636,9 +664,9 @@
         </div>
     </section>
 
-    <!-- Slide 19: NOVO - Demonstração Prática -->
+    <!-- Slide 20: NOVO - Demonstração Prática -->
     <section class="slide">
-        <div class="slide-number">19</div>
+        <div class="slide-number">20</div>
         <div class="slide-content">
             <h2>Vamos testar o Tutor Virtual?</h2>
             <p style="text-align: center; margin-top: 2em; font-size: 1.3rem;">Para explorar o tutor em ação, acesse o link abaixo.</p>
@@ -646,7 +674,7 @@
                 🚀 Testar o Tutor Virtual
             </a>
             <p class="figure-caption" style="margin-top: 2em; font-size: 1.1rem;">https://nodatccunifei.streamlit.app</p>
-            <p style="margin-top: 1.5em; font-style: italic;">Experimente fazer perguntas sobre o conteúdo das aulas de Sistemas Operacionais!</p>
+            <p style="margin-top: 1.5em; font-style: italic; text-align: center;">Experimente fazer perguntas sobre o conteúdo das aulas de Sistemas Operacionais!</p>
         </div>
         <div class="slide-footer">
             <img src="unifei_logo.png" alt="Logo da UNIFEI">
@@ -654,16 +682,16 @@
         </div>
     </section>
 
-    <!-- Slide 20: NOVO - Agradecimentos -->
+    <!-- Slide 21: NOVO - Agradecimentos -->
     <section class="slide">
-        <div class="slide-number">20</div>
+        <div class="slide-number">21</div>
         <div class="slide-content">
             <h2>Dúvidas?</h2>
             <h1 style="margin-top: 1em;">Obrigado!</h1>
             
             <div style="margin-top: 4em; text-align: center;">
                 <img src="unifei_logo.png" alt="Logo da UNIFEI" class="logo-unifei" style="max-width: 180px;">
-                <p style="font-size: 1.5rem; margin-top: 2em;"><strong>Gustavo Kiyoshi Sousa Noda</strong></p>
+                <p style="font-size: 1.5rem; margin-top: 2em; text-align: center;"><strong>Gustavo Kiyoshi Sousa Noda</strong></p>
             </div>
         </div>
         <div class="slide-footer">

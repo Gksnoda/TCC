@@ -321,33 +321,41 @@ def call_claude_with_tools(anthropic_client, messages: List[Dict], search_functi
             # Adiciona resultados das ferramentas
             messages.append({"role": "user", "content": tool_results})
             
-            # Segunda chamada com os resultados das ferramentas
-            final_response = anthropic_client.messages.create(
-                model=config["api"]["ANTHROPIC_MODEL"],
-                max_tokens=config["api"]["ANTHROPIC_MAX_TOKENS"],
-                system=system_prompt,
-                messages=messages
-            )
+            # Segunda chamada com streaming
+            def stream_generator():
+                final_input_tokens = 0
+                final_output_tokens = 0
+                with anthropic_client.messages.stream(
+                    model=config["api"]["ANTHROPIC_MODEL"],
+                    max_tokens=config["api"]["ANTHROPIC_MAX_TOKENS"],
+                    system=system_prompt,
+                    messages=messages
+                ) as stream:
+                    for text_chunk in stream.text_stream:
+                        yield text_chunk
+                    # Captura tokens da resposta final
+                    final_message = stream.get_final_message()
+                    if final_message and hasattr(final_message, 'usage'):
+                        final_input_tokens = final_message.usage.input_tokens
+                        final_output_tokens = final_message.usage.output_tokens
+                
+                # Retorna tokens totais
+                return total_input_tokens + final_input_tokens, total_output_tokens + final_output_tokens
             
-            # Atualiza contadores de tokens da segunda chamada
-            total_input_tokens += final_response.usage.input_tokens
-            total_output_tokens += final_response.usage.output_tokens
-            
-            # Extrai o texto da resposta final
-            response_text = ""
-            for block in final_response.content:
-                if block.type == "text":
-                    response_text += block.text
-            
-            return response_text, total_input_tokens, total_output_tokens
+            return stream_generator(), total_input_tokens, total_output_tokens
         else:
-            # Resposta direta
-            response_text = ""
-            for block in response.content:
-                if block.type == "text":
-                    response_text += block.text
+            # Resposta direta com streaming
+            def stream_generator():
+                with anthropic_client.messages.stream(
+                    model=config["api"]["ANTHROPIC_MODEL"],
+                    max_tokens=config["api"]["ANTHROPIC_MAX_TOKENS"],
+                    system=system_prompt,
+                    messages=messages
+                ) as stream:
+                    for text_chunk in stream.text_stream:
+                        yield text_chunk
             
-            return response_text, total_input_tokens, total_output_tokens
+            return stream_generator(), total_input_tokens, total_output_tokens
             
     except Exception as e:
         error("Erro ao chamar Claude: {}", str(e))
@@ -481,10 +489,6 @@ def main():
         with st.chat_message("user"):
             st.markdown(display_text)
         
-        # Cria embedding da mensagem do usuário
-        with st.spinner("Criando embedding da mensagem..."):
-            user_embedding = create_embedding(user_input, embedding_model)
-        
         # Processa arquivos se enviados
         file_data = None
         if uploaded_files:
@@ -495,9 +499,8 @@ def main():
                 if file_data[0] == "error":
                     st.error(file_data[2])
         
-        # Busca no Qdrant
-        with st.spinner("Buscando informações relevantes..."):
-            search_results = search_qdrant(user_input, qdrant_client, embedding_model, config)
+        # Busca no Qdrant (silenciosamente)
+        search_results = search_qdrant(user_input, qdrant_client, embedding_model, config)
         
         # Cria função de busca para as ferramentas do Claude
         def search_function(query: str) -> List[Dict]:
@@ -508,12 +511,19 @@ def main():
         
         # Chama Claude
         with st.chat_message("assistant"):
-            with st.spinner("Claude está pensando..."):
+            with st.spinner("Tutor está gerando resposta..."):
                 result = call_claude_with_tools(anthropic_client, claude_messages, search_function, config, system_prompt)
             
             if isinstance(result, tuple) and len(result) == 3:
-                response, input_tokens, output_tokens = result
-                st.markdown(response)
+                stream_generator, input_tokens, output_tokens = result
+                
+                if callable(stream_generator):
+                    # Usa streaming
+                    response = st.write_stream(stream_generator)
+                else:
+                    # Resposta direta (caso de erro)
+                    response = stream_generator
+                    st.markdown(response)
                 
                 # Atualiza o uso de tokens e custos
                 update_token_usage(input_tokens, output_tokens)
